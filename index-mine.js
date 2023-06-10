@@ -14,8 +14,8 @@ const path = require('path')
 // {name} {title} {room_id}
 const room_list = [
   {
-    room_id: 24613387,
-    name: '',
+    room_id: 23527503,
+    name: '蒂莉雅',
     status: 0,
     cover: '',
     avatar: '',
@@ -23,7 +23,111 @@ const room_list = [
     notify_title: [
       '{name}尚未开播',
       '{name}正在直播',
-      '{name}正在轮播',
+      '{name}正在轮播'
+    ],
+  },
+  {
+    room_id: 22882574,
+    name: '诺可Noko',
+    status: 0,
+    cover: '',
+    avatar: '',
+    title: '',
+    notify_title: [
+      '{name}尚未开播',
+      '{name}正在直播',
+      '{name}正在轮播'
+    ],
+  },
+  {
+    room_id: 22642754,
+    name: '桃几',
+    status: 0,
+    cover: '',
+    avatar: '',
+    title: '',
+    notify_title: [
+      '{name}尚未开播',
+      '{name}正在直播',
+      '{name}正在轮播'
+    ],
+  },
+  {
+    room_id: 22696653,
+    name: '兰音',
+    status: 0,
+    cover: '',
+    avatar: '',
+    title: '',
+    notify_title: [
+      '{name}尚未开播',
+      '{name}正在直播',
+      '{name}正在轮播'
+    ],
+  },
+  {
+    room_id: 24613387,
+    name: '奶琦',
+    status: 0,
+    cover: '',
+    avatar: '',
+    title: '',
+    notify_title: [
+      '{name}尚未开播',
+      '{name}正在直播',
+      '{name}正在轮播'
+    ],
+  },
+  {
+    room_id: 5561470,
+    name: 'Mia米娅',
+    status: 0,
+    cover: '',
+    avatar: '',
+    title: '',
+    notify_title: [
+      '{name}尚未开播',
+      '{name}正在直播',
+      '{name}正在轮播'
+    ],
+  },
+  {
+    room_id: 26097368,
+    name: '白铃_Sirorin',
+    status: 0,
+    cover: '',
+    avatar: '',
+    title: '',
+    notify_title: [
+      '{name}尚未开播',
+      '{name}正在直播',
+      '{name}正在轮播'
+    ],
+  },
+  {
+    room_id: 594461,
+    name: '阿蕊娅',
+    status: 0,
+    cover: '',
+    avatar: '',
+    title: '',
+    notify_title: [
+      '{name}尚未开播',
+      '{name}正在直播',
+      '{name}正在轮播'
+    ],
+  },
+  {
+    room_id: 23369901,
+    name: '蝶',
+    status: 0,
+    cover: '',
+    avatar: '',
+    title: '',
+    notify_title: [
+      '{name}尚未开播',
+      '{name}正在直播',
+      '{name}正在轮播'
     ],
   },
 ]
@@ -64,6 +168,7 @@ function getRoomCfg (room_id) {
   return room
 }
 
+// 解析直播间数据
 function parseRoomData (room_id, json) {
   const room = getRoomCfg(room_id)
   if (!room) {
@@ -81,6 +186,7 @@ function parseRoomData (room_id, json) {
   // 当直播状态变化时显示通知
   if (status !== room.status) {
     room.status = status
+    const date = new Date().toLocaleString()
     switch (status) {
       case 0:
         // showNotify(room_id)
@@ -97,6 +203,7 @@ function parseRoomData (room_id, json) {
   }
 }
 
+// 发送通知消息
 async function showNotify (room_id) {
   const room = getRoomCfg(room_id)
   if (!room) {
@@ -129,7 +236,8 @@ async function showNotify (room_id) {
       // response 在 Windows 上的值有 3 种：
       // 点击通知：activate
       // 点击 x 关闭：dismissed
-      // 等待超时：timeout
+      // 如果用户没有进行任何操作，通知在右下角显示 5 秒后自动消失，会自动触发 timeout
+      // 收纳在在通知中心里之后，就算点击通知也不会有返回值了，所以无法在此时触发动作
       if (response === 'activate') {
         const URL = `https://live.bilibili.com/${room_id}`
         openURL(URL)
@@ -140,9 +248,6 @@ async function showNotify (room_id) {
 
 async function saveFile (url, fileName) {
   return new Promise(resolve => {
-    if (url.startsWith('http:')) {
-      url = url.replace('http:', 'https:')
-    }
     https.get(url, (res) => {
       const file = fs.createWriteStream(fileName)
       res.pipe(file)
