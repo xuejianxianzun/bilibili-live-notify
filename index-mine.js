@@ -1,143 +1,56 @@
-// 监控 bilibili 直播间，显示系统通知进行提醒
-// 默认只在开播时发送通知
 const https = require('https')
 const notifier = require('node-notifier')
 const child_process = require('child_process')
 const fs = require('fs')
 const path = require('path')
 
-// 以直播间为单位进行配置
-// 可以只填写 room_id；如果有需要，也可以修改 name 和 notify_title
-// 其他选项不要修改，会自动获取
-
-// notify_title 里可以使用的转义代码：
-// {name} {title} {room_id}
-const room_list = [
+const config = [
   {
     room_id: 23527503,
     name: '蒂莉雅',
-    status: 0,
-    cover: '',
-    avatar: '',
-    title: '',
-    notify_title: [
-      '{name}尚未开播',
-      '{name}正在直播',
-      '{name}正在轮播'
-    ],
   },
   {
     room_id: 22882574,
     name: '诺可Noko',
-    status: 0,
-    cover: '',
-    avatar: '',
-    title: '',
-    notify_title: [
-      '{name}尚未开播',
-      '{name}正在直播',
-      '{name}正在轮播'
-    ],
   },
   {
     room_id: 22642754,
     name: '桃几',
-    status: 0,
-    cover: '',
-    avatar: '',
-    title: '',
-    notify_title: [
-      '{name}尚未开播',
-      '{name}正在直播',
-      '{name}正在轮播'
-    ],
   },
   {
     room_id: 22696653,
     name: '兰音',
-    status: 0,
-    cover: '',
-    avatar: '',
-    title: '',
-    notify_title: [
-      '{name}尚未开播',
-      '{name}正在直播',
-      '{name}正在轮播'
-    ],
   },
   {
     room_id: 24613387,
-    name: '奶琦',
-    status: 0,
-    cover: '',
-    avatar: '',
-    title: '',
-    notify_title: [
-      '{name}尚未开播',
-      '{name}正在直播',
-      '{name}正在轮播'
-    ],
+    name: '琦琦',
   },
   {
     room_id: 5561470,
     name: 'Mia米娅',
-    status: 0,
-    cover: '',
-    avatar: '',
-    title: '',
-    notify_title: [
-      '{name}尚未开播',
-      '{name}正在直播',
-      '{name}正在轮播'
-    ],
   },
   {
     room_id: 26097368,
     name: '白铃_Sirorin',
-    status: 0,
-    cover: '',
-    avatar: '',
-    title: '',
-    notify_title: [
-      '{name}尚未开播',
-      '{name}正在直播',
-      '{name}正在轮播'
-    ],
   },
   {
     room_id: 594461,
     name: '阿蕊娅',
-    status: 0,
-    cover: '',
-    avatar: '',
-    title: '',
-    notify_title: [
-      '{name}尚未开播',
-      '{name}正在直播',
-      '{name}正在轮播'
-    ],
   },
   {
     room_id: 23369901,
     name: '蝶',
-    status: 0,
-    cover: '',
-    avatar: '',
-    title: '',
-    notify_title: [
-      '{name}尚未开播',
-      '{name}正在直播',
-      '{name}正在轮播'
-    ],
+  },
+  {
+    room_id: 631,
+    name: '早稻叽',
   },
 ]
 
+// -------------以下部分无需修改-------------
+
 // 获取直播间数据
 function getLiveRoomData (room_id) {
-  // 这个 api 获取的数据很少
-  // const url = `https://api.live.bilibili.com/room/v1/Room/room_init?id=${room_id}`
-
-  // 这个 api 获取的数据多，现在需要使用这个 api
   const url = `https://api.live.bilibili.com/xlive/web-room/v1/index/getInfoByRoom?room_id=${room_id}`
   https.get(url, res => {
     let body = ''
@@ -151,6 +64,7 @@ function getLiveRoomData (room_id) {
         const json = JSON.parse(body)
         parseRoomData(room_id, json)
       } catch (error) {
+        console.error(body)
         console.error(error.message)
       }
     })
@@ -160,22 +74,13 @@ function getLiveRoomData (room_id) {
   })
 }
 
-function getRoomCfg (room_id) {
-  const room = room_list.find(data => data.room_id === room_id)
-  if (!room) {
-    console.log(`没找到这个直播间的配置${room_id}`)
-  }
-  return room
-}
-
-// 解析直播间数据
 function parseRoomData (room_id, json) {
-  const room = getRoomCfg(room_id)
-  if (!room) {
+  // 如果房间号不存在那么 data 就是 null
+  if (json.data === null || json.data === undefined) {
     return
   }
 
-  const status = json.data.room_info.live_status
+  const room = room_list.find(data => data.room_id === room_id)
   room.cover = json.data.room_info.cover
   room.avatar = json.data.anchor_info.base_info.face
   room.title = json.data.room_info.title
@@ -184,18 +89,18 @@ function parseRoomData (room_id, json) {
   }
 
   // 当直播状态变化时显示通知
+  const status = json.data.room_info.live_status
   if (status !== room.status) {
     room.status = status
-    const date = new Date().toLocaleString()
     switch (status) {
       case 0:
-        // showNotify(room_id)
+        // showNotify(room, '{name}尚未开播')
         break
       case 1:
-        showNotify(room_id)
+        showNotify(room, '{name}正在直播')
         break
       case 2:
-        // showNotify(room_id)
+        // showNotify(room, '{name}正在轮播')
         break
       default:
         console.log(`不知道啥情况。status ${status}`)
@@ -203,19 +108,10 @@ function parseRoomData (room_id, json) {
   }
 }
 
-// 发送通知消息
-async function showNotify (room_id) {
-  const room = getRoomCfg(room_id)
-  if (!room) {
-    return
-  }
-  let msg = room.notify_title[room.status]
-  if (!msg) {
-    return console.log(`没有找到通知消息文本。${room_id} ${room.status}`)
-  }
-
-  // 替换转义代码
-  const title = msg.replace('{name}', room.name)
+async function showNotify (room, title) {
+  // 替换 title 里的转义代码
+  // {name} {title} {room_id}
+  title = title.replace('{name}', room.name)
     .replace('{title}', room.title)
     .replace('{room_id}', room.room_id)
 
@@ -236,8 +132,7 @@ async function showNotify (room_id) {
       // response 在 Windows 上的值有 3 种：
       // 点击通知：activate
       // 点击 x 关闭：dismissed
-      // 如果用户没有进行任何操作，通知在右下角显示 5 秒后自动消失，会自动触发 timeout
-      // 收纳在在通知中心里之后，就算点击通知也不会有返回值了，所以无法在此时触发动作
+      // 等待超时：timeout
       if (response === 'activate') {
         const URL = `https://live.bilibili.com/${room_id}`
         openURL(URL)
@@ -248,6 +143,9 @@ async function showNotify (room_id) {
 
 async function saveFile (url, fileName) {
   return new Promise(resolve => {
+    if (url.startsWith('http:')) {
+      url = url.replace('http:', 'https:')
+    }
     https.get(url, (res) => {
       const file = fs.createWriteStream(fileName)
       res.pipe(file)
@@ -281,20 +179,34 @@ function openURL (url) {
 }
 
 // 启动
+const room_list = config.map(cfg => {
+  return {
+    room_id: cfg.room_id,
+    name: cfg.name,
+    status: 0,
+    cover: '',
+    avatar: '',
+    title: '',
+  }
+})
+
 let time_start = 0
-let add = 500 // 毫秒，如果有多个直播间，则每次请求错开一段时间，避免拥挤
+const add = 500 // 毫秒，如果有多个直播间，则每次请求错开一段时间，避免拥挤
 const interval = 60000  // 毫秒，每个直播间隔多长时间查询一次
 
-room_list.forEach(room_data => {
+console.log('监控列表：')
+room_list.forEach(room => {
+  const tab = String(room.room_id).length < 8 ? '\t\t' : '\t'
+  console.log(`${room.room_id}${tab}${room.name}`)
   setTimeout(() => {
     time_start += add
 
     // 启动时立即查询一次
-    getLiveRoomData(room_data.room_id)
+    getLiveRoomData(room.room_id)
 
     // 然后定时查询
     setInterval(() => {
-      getLiveRoomData(room_data.room_id)
+      getLiveRoomData(room.room_id)
     }, interval)
   }, time_start)
 })
